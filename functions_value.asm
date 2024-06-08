@@ -2,13 +2,15 @@ extern printf
 
 section .rodata
     format_double: db "%f", 0
-    x: dq -15.416
+    x: dq 0.03
     
     const_f1_1: dq 0.6
     const_f1_2: dq 3.0
     
     const_f2_1: dq 2.0
     const_f2_2: dq 1.0
+    
+    const_f3_1: dq 3.0
 
 section .bss
     result: resq 1
@@ -18,7 +20,7 @@ global main
 main:
     push dword[x + 4]
     push dword[x]
-    call f2_value
+    call f3_value
     pop dword[result]
     pop dword[result + 4]
     
@@ -70,3 +72,15 @@ f2_value:
     
 ; 3 / x
 f3_value:
+    push ebp
+    mov ebp, esp
+    
+    finit
+    
+    fld qword[const_f3_1] ; 3
+    fdiv qword[ebp + 8] ; 3 / x
+ 
+    fstp qword[ebp + 8]
+    
+    pop ebp
+    ret

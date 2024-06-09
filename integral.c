@@ -41,21 +41,14 @@ struct coefs {
 
 // Find integral ∫f(x), x∊[a,b] by Simpson's formule
 double simpson(afunc *f, const double a, const double b, struct coefs* coefs) {
-   
+
    // Pass all 'x' from the [start, end] interval with step
    for (double x = a; x <= b; x += coefs->step) {
-
-      double y_i = f(x);
-
-      if ((x == a) || (x + coefs->step > b)) { // first or last (i)
-         coefs->first_last_yi += y_i;
-      }
-      else { // odd (i)
-         coefs->odd_yi += y_i; // increase odd sum
-      }
+      coefs->odd_yi += f(x); // increase odd sum
    }
-
-   return (coefs->step / 3) * (coefs->first_last_yi + 4*coefs->odd_yi + 2*coefs->even_yi);
+   
+   // (step/3) -> (step/6), because: coefs->step is a step only for getting odd numbers
+   return (coefs->step / 6) * (coefs->first_last_yi + 4*coefs->odd_yi + 2*coefs->even_yi);
 }
 
 
@@ -64,25 +57,26 @@ double integral(afunc *f, const double a, const double b, const double eps2) {
 
    struct coefs coefs = {0, 0, 0, 0}; // create and null simspon's coefs
    coefs.step = (b - a) / 5; // determine step for 'x'
+   coefs.first_last_yi = f(a) + f(b); // determine sum of first and last y_i
 
    double integ_iter1; // integral calculated by "n" iterations
    double integ_iter2; // integral calculated by "2n" iterations
 
-   simpson(f, a, b, &coefs); // calculate values in odd positions
-
+   simpson(f, a + coefs.step, b - coefs.step, &coefs); // calculate values in odd positions
+   
    /* When step is decreasing by 2, 
       between old values appear new ones in odd positions */
 
    do {
       coefs.even_yi += coefs.odd_yi; // mark odd positions as even positions
       coefs.odd_yi = 0; // null odd posiotons
-      // Move start and calculate values in odd positions
-      integ_iter1 = simpson(f, a + coefs.step, b - coefs.step, &coefs);
-      coefs.step /= 2; // decrease the step
+      // Move 'start', 'end' for half and calculate values in odd positions
+      integ_iter1 = simpson(f, a + coefs.step/2, b - coefs.step/2, &coefs);
+      coefs.step /= 2;
 
       coefs.even_yi += coefs.odd_yi;
       coefs.odd_yi = 0;
-      integ_iter2 = simpson(f, a + coefs.step, b - coefs.step, &coefs);
+      integ_iter2 = simpson(f, a + coefs.step/2, b - coefs.step/2, &coefs);
       coefs.step /= 2;
    }
    while (fabs(integ_iter1 - integ_iter2) / 15 >= eps2);
@@ -105,9 +99,9 @@ int main(int argc, char* argv[]) {
    printf("f1 ∩ f3 = %f\n", f1_f3);
    printf("f2 ∩ f3 = %f\n\n", f2_f3);
 
-   double integral_f1 = integral(f1_value, f1_f3, f1_f2, 0.01);
-   double integral_f2 = integral(f2_value, f2_f3, f1_f2, 0.01);
-   double integral_f3 = integral(f3_value, f1_f3, f2_f3, 0.01);
+   double integral_f1 = integral(f1_value, f1_f3, f1_f2, 0.001);
+   double integral_f2 = integral(f2_value, f2_f3, f1_f2, 0.001);
+   double integral_f3 = integral(f3_value, f1_f3, f2_f3, 0.001);
 
    printf("x1=%f, x2=%f, integral(f1) = %f\n", f1_f3, f1_f2, integral_f1);
    printf("x1=%f, x2=%f, integral(f2) = %f\n", f2_f3, f1_f2, integral_f2);

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <math.h>
 
+typedef double afunc(double);
 
 // Functions from ASM
 extern double f1_value(double x);
@@ -8,14 +9,14 @@ extern double f2_value(double x);
 extern double f3_value(double x);
 
 
-// Find x from f1(x)=f2(x) by dichotomy algorithm
-double root(double (*f1)(double), double(*f2)(double), double a, double b, const double eps) {
+// Find x from f(x)=g(x) by dichotomy algorithm
+double root(afunc *f, afunc *g, double a, double b, const double eps1) {
    double mid = (a + b) / 2; // number in the middle of the segment [a, b]
 
-   while (fabs(f1(mid) - f2(mid)) > eps) {
+   while (fabs(f(mid) - g(mid)) > eps1) {
 
       // Check the signs at the ends of the segment
-      if ((f1(a) - f2(a)) * (f1(mid) - f2(mid)) <= 0) {
+      if ((f(a) - g(a)) * (f(mid) - g(mid)) <= 0) {
          b = mid; // 0 is included in [a, mid]
       }
       else {
@@ -29,54 +30,64 @@ double root(double (*f1)(double), double(*f2)(double), double a, double b, const
 }
 
 
+// Simpson's formule coeficents
+struct coefs {
+   double first_last_yi; // first(y_i) + last(y_i)
+   double even_yi; // sum of all y_i in even positions
+   double odd_yi; // sum of all y_i in odd positions
+
+   double step; // step for 'x'
+};
+
 // Find integral ∫f(x), x∊[a,b] by Simpson's formule
-double simpson(double(*f)(double), const double a, const double b, const double iterations) {
-
-   double first_last_yi = 0; // first(y_i) + last(y_i)
-   double even_yi = 0; // sum of all y_i in even positions
-   double odd_yi = 0; // sum of all y_i in odd positions
-
-   double step = (b - a) / iterations;
-   int i = 0;
+double simpson(afunc *f, const double a, const double b, struct coefs* coefs) {
    
-   // Pass all 'x' from the [a,b] interval with step
-   for (double x = a; x <= b; x += step) {
+   // Pass all 'x' from the [start, end] interval with step
+   for (double x = a; x <= b; x += coefs->step) {
 
       double y_i = f(x);
 
-      if ((i == 0) || (x + step > b)) { // first or last (i)
-         first_last_yi += y_i;
-      }
-      else if (i % 2 == 0) { // even (i)
-         even_yi += y_i;
+      if ((x == a) || (x + coefs->step > b)) { // first or last (i)
+         coefs->first_last_yi += y_i;
       }
       else { // odd (i)
-         odd_yi += y_i;
+         coefs->odd_yi += y_i; // increase odd sum
       }
-
-      ++i;
    }
 
-   return (step / 3) * (first_last_yi + 4*odd_yi + 2*even_yi);
+   return (coefs->step / 3) * (coefs->first_last_yi + 4*coefs->odd_yi + 2*coefs->even_yi);
 }
 
 
 // Starter function for finding the integral using Rugne's rule
-double integral(double(*f)(double), const double a, const double b, const double eps) {
+double integral(afunc *f, const double a, const double b, const double eps2) {
 
-   // Count of iterations in integral calculating 
-   double iter = 10;
-   // Simpson integral values
-   double integ_iter1 = simpson(f, a, b, iter);
-   double integ_iter2 = simpson(f, a, b, iter*2);
+   struct coefs coefs = {0, 0, 0, 0}; // create and null simspon's coefs
+   coefs.step = (b - a) / 5; // determine step for 'x'
+
+   double integ_iter1; // integral calculated by "n" iterations
+   double integ_iter2; // integral calculated by "2n" iterations
+
+   simpson(f, a, b, &coefs); // calculate values in odd positions
+
+   /* When step is decreasing by 2, 
+      between old values appear new ones in odd positions */
+
+   do {
+      coefs.even_yi += coefs.odd_yi; // mark odd positions as even positions
+      coefs.odd_yi = 0; // null odd posiotons
+      // Move start and calculate values in odd positions
+      integ_iter1 = simpson(f, a + coefs.step, b - coefs.step, &coefs);
+      coefs.step /= 2; // decrease the step
+
+      coefs.even_yi += coefs.odd_yi;
+      coefs.odd_yi = 0;
+      integ_iter2 = simpson(f, a + coefs.step, b - coefs.step, &coefs);
+      coefs.step /= 2;
+   }
+   while (fabs(integ_iter1 - integ_iter2) / 15 >= eps2);
 
    // Integral with 'eps' accuracy = I₂ₙ when (|Iₙ - I₂ₙ|/15 < eps)
-   while (fabs(integ_iter1 - integ_iter2) / 15 >= eps) {
-      iter *= 2;
-      integ_iter1 = integ_iter2;
-      integ_iter2 = simpson(f, a, b, iter*2);
-   }
-   
    return integ_iter2;
 }
 

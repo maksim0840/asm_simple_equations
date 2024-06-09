@@ -15,7 +15,9 @@
 
 ---
 nasm -felf32 functions_value.asm
+
 gcc -m32 -c integral.c
+
 gcc -m32 integral.o functions_value.o -o a.out
 
 

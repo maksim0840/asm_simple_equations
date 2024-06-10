@@ -171,7 +171,7 @@ int main(int argc, char* argv[]) {
             printf("expected result: %f\n", expected_result);
             printf("function result: %f\n", function_result);
             printf("delta: %f\n", delta);
-            printf("abs(delta): %f\n", fabs(delta));
+            printf("abs(delta): %f\n\n", fabs(delta));
             break;
 
          case 'I':
@@ -184,7 +184,7 @@ int main(int argc, char* argv[]) {
             printf("expected result: %f\n", expected_result);
             printf("function result: %f\n", function_result);
             printf("delta: %f\n", delta);
-            printf("abs(delta): %f\n", fabs(delta));
+            printf("abs(delta): %f\n\n", fabs(delta));
             break;
 
          default:

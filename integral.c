@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <math.h>
+#include <getopt.h>
 
 typedef double afunc(double);
 
@@ -8,9 +9,11 @@ extern double f1_value(double x);
 extern double f2_value(double x);
 extern double f3_value(double x);
 
+int iterations = 0; // global counter of iterations in root function
 
 // Find x from f(x)=g(x) by dichotomy algorithm
 double root(afunc *f, afunc *g, double a, double b, const double eps1) {
+
    double mid = (a + b) / 2; // number in the middle of the segment [a, b]
 
    while (fabs(f(mid) - g(mid)) > eps1) {
@@ -24,6 +27,7 @@ double root(afunc *f, afunc *g, double a, double b, const double eps1) {
       }
 
       mid = (a + b) / 2;
+      ++iterations;
    }
 
    return mid;
@@ -85,30 +89,113 @@ double integral(afunc *f, const double a, const double b, const double eps2) {
    return integ_iter2;
 }
 
+// Return function by its sequence number
+afunc* func_by_ind(int ind) {
+   if (ind == 1) {
+      return f1_value;
+   }
+   else if (ind == 2) {
+      return f2_value;
+   }
+   return f3_value;
+}
 
 int main(int argc, char* argv[]) {
-   printf("f1(3.92) = %f\n", f1_value(3.92));
-   printf("f2(10.76) = %f\n", f2_value(10.76));
-   printf("f3(90.2) = %f\n\n", f3_value(90.2));
 
-   double f1_f2 = root(f1_value, f2_value, 3, 5, 0.001);
-   double f1_f3 = root(f1_value, f3_value, 0, 2, 0.001);
-   double f2_f3 = root(f2_value, f3_value, 2, 4, 0.001);
+   // Roots f(x) = g(x)
+   double f12_intersec = root(f1_value, f2_value, 3, 5, 0.001);
+   double f13_intersec = root(f1_value, f3_value, 0, 2, 0.001);
+   double f23_intersec = root(f2_value, f3_value, 2, 4, 0.001);
 
-   printf("f1 ∩ f2 = %f\n", f1_f2);
-   printf("f1 ∩ f3 = %f\n", f1_f3);
-   printf("f2 ∩ f3 = %f\n\n", f2_f3);
+   // Integral f(x)
+   double f1_integral = integral(f1_value, f13_intersec, f12_intersec, 0.001);
+   double f2_integral = integral(f2_value, f23_intersec, f12_intersec, 0.001);
+   double f3_integral = integral(f3_value, f13_intersec, f23_intersec, 0.001);
 
-   double integral_f1 = integral(f1_value, f1_f3, f1_f2, 0.001);
-   double integral_f2 = integral(f2_value, f2_f3, f1_f2, 0.001);
-   double integral_f3 = integral(f3_value, f1_f3, f2_f3, 0.001);
+   // Area between curves
+   double area = f1_integral - f2_integral - f3_integral;
 
-   printf("x1=%f, x2=%f, integral(f1) = %f\n", f1_f3, f1_f2, integral_f1);
-   printf("x1=%f, x2=%f, integral(f2) = %f\n", f2_f3, f1_f2, integral_f2);
-   printf("x1=%f, x2=%f, integral(f3) = %f\n\n", f1_f3, f2_f3, integral_f3);
+   // Short options array for command line
+   const char* short_options = "hriR:I:"; // ':' means value expectation
 
-   double S = integral_f1 - integral_f2 - integral_f3;
-   printf("result S(f1, f2, f3) = %f\n", S);
+   // Long options array for command line
+   const struct option long_options[] = {
+      // {"option", value_expectation, ptr_on_flag, value_for_flag}
+      {"help", no_argument, NULL, 'h'},
+      {"root", no_argument, NULL, 'r'},
+      {"iterations", no_argument, NULL, 'i'},
+      {"test-root", required_argument, NULL, 'R'},
+      {"test-integral", required_argument, NULL, 'I'},
+      { NULL, 0, NULL, 0}
+   };
+
+   char zero_options_flag = 1;
+   char option_type;
+   int value_index = -1; // index of the parameter string in argv array
+
+   // Scan command line args
+   while ((option_type = getopt_long(argc, argv, short_options, long_options, &value_index)) != -1) {
+      zero_options_flag = 0;
+
+      switch (option_type) {
+         case 'h':
+            printf("--help -h \t\t print all avaliable options\n");
+            printf("--root -r \t\t print 'x' coordinates of functions intersection\n");
+            printf("--iterations -i \t print number of iterations in 'root' function\n");
+            printf("--test-root -R \t\t test 'root' function by given argumenst (F1:F2:A:B:E:R)\n");
+            printf("--test-integral -I \t test 'integral' function by given arguments (F:A:B:E:R)\n");
+            break;
+
+         case 'r':
+            printf("f1 ∩ f2 = %f\n", f12_intersec);
+            printf("f1 ∩ f3 = %f\n", f13_intersec);
+            printf("f2 ∩ f3 = %f\n", f23_intersec);
+            break;
+
+         case 'i':
+            printf("%i\n", iterations); // global variable
+            break;
+
+         // Functions args
+         int f_ind, g_ind;
+         double a, b, eps;
+         double expected_result, function_result, delta;
+
+         case 'R':
+            // parse string (optarg - returned by getopt_long string after option)
+            sscanf(optarg, "%i:%i:%lf:%lf:%lf:%lf", &f_ind, &g_ind, &a, &b, &eps, &expected_result);
+
+            function_result = root(func_by_ind(f_ind), func_by_ind(g_ind), a, b, eps);
+            delta = fabs(expected_result - function_result);
+
+            printf("expected result: %f\n", expected_result);
+            printf("function result: %f\n", function_result);
+            printf("delta: %f\n", delta);
+            printf("abs(delta): %f\n", fabs(delta));
+            break;
+
+         case 'I':
+            // parse string (optarg - returned by getopt_long string after option)
+            sscanf(optarg, "%i:%lf:%lf:%lf:%lf", &f_ind, &a, &b, &eps, &expected_result);
+
+            function_result = integral(func_by_ind(f_ind), a, b, eps);
+            delta = fabs(function_result - expected_result);
+
+            printf("expected result: %f\n", expected_result);
+            printf("function result: %f\n", function_result);
+            printf("delta: %f\n", delta);
+            printf("abs(delta): %f\n", fabs(delta));
+            break;
+
+         default:
+            printf("Options ERROR");
+      };
+   }
+
+    // Print area
+   if (zero_options_flag) {
+      printf("%f\n", area);
+   }
 
    return 0;
 }

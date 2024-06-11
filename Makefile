@@ -1,19 +1,7 @@
-CFLAGS ?= -O2 -g
 
-CFLAGS += -std=gnu99
+all: integral
 
-CFLAGS += -Wall -Werror -Wformat-security -Wignored-qualifiers -Winit-self \
-	-Wswitch-default -Wpointer-arith -Wtype-limits -Wempty-body \
-	-Wstrict-prototypes -Wold-style-declaration -Wold-style-definition \
-	-Wmissing-parameter-type -Wmissing-field-initializers -Wnested-externs \
-	-Wstack-usage=4096 -Wmissing-prototypes -Wfloat-equal -Wabsolute-value
-
-CFLAGS += -fsanitize=undefined -fsanitize-undefined-trap-on-error
-
-CC += -m32 -c -no-pie -fno-pie
-
-
-all: integral.o functions_value.o
+integral: integral.o functions_value.o
 	gcc -m32 integral.o functions_value.o -o integral
 
 integral.o: integral.c
@@ -21,7 +9,6 @@ integral.o: integral.c
 
 functions_value.o: functions_value.asm
 	nasm -felf32 functions_value.asm -o functions_value.o
-
 
 clean:
 	rm integral *.o

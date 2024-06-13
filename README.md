@@ -14,9 +14,4 @@
 4. **Квадратурные формулы:** формула Симпсона (парабол). 
 
 ---
-nasm -felf32 functions_value.asm
-
-gcc -m32 -c integral.c
-
-gcc -m32 integral.o functions_value.o -o a.out
-
+![desmos](https://github.com/hse-asmcourse-2022/233-vychislenie-korney-uravneniy-i-opredelennyh-integralov-maksim0840/assets/117035413/0069ac35-0e63-4910-b7c1-d636255330cd)

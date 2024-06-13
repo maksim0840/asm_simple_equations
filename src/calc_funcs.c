@@ -1,11 +1,6 @@
 #include <math.h>
 #include "calc_funcs.h"
-#include <stdio.h>
 
-// Functions from ASM
-extern double f1_value(double);
-extern double f2_value(double);
-extern double f3_value(double);
 
 int iterations = 0; // global counter of iterations in root function
 
